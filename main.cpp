@@ -117,16 +117,17 @@ int main(int argc, char *argv[])
 
        /* Grab a packet */
        num=0;
-       printf("grabbing 10 packets");
+       printf("-----------grabbing 10 packets------------------\n");
+       printf("grabbing 10 packets\n");
        while((res = pcap_next_ex(handle, &header, &packet))>=0){ //double pointer
            if(res==0) {continue; }
            num++;
            if(num ==10)
                break;
-       }
+       //}
 
        /* Print its length */
-       printf("Jacked a packet with length of [%d]\n", header->len);
+       printf("Length [%d]\n", header->len);
 
        /* print packet data*/
        pEth = (struct ethernet_header *)packet;
@@ -191,7 +192,8 @@ int main(int argc, char *argv[])
         }
         printf("\n");
     }
-
+    printf("-------------------------------------------------\n");
+}
        /* And close the session */
        pcap_close(handle);
        return(0);
