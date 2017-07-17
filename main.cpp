@@ -72,7 +72,6 @@ struct tcp_header {
 int main(int argc, char *argv[])
     {
        setbuf(stdout, NULL);
-       printf("hi");
        pcap_t *handle;			/* Session handle */
        char *dev;			/* The device to sniff on */
        char errbuf[PCAP_ERRBUF_SIZE];	/* Error string */
@@ -82,12 +81,12 @@ int main(int argc, char *argv[])
        bpf_u_int32 net;		/* Our IP */
        struct pcap_pkthdr *header;	/* The header that pcap gives us */
        const u_char *packet;	/* The actual packet */
-       int res,i,k;
+       int res,i,k,num;
        struct ethernet_header *pEth;
        struct ip_header *pIph;
        struct tcp_header *pTcp;
 
-       printf("hi");
+
        /* Define the evice */
        dev = pcap_lookupdev(errbuf);
        if (dev == NULL) {
@@ -117,11 +116,13 @@ int main(int argc, char *argv[])
        }
 
        /* Grab a packet */
-       printf("hi");
+       num=0;
+       printf("grabbing 10 packets");
        while((res = pcap_next_ex(handle, &header, &packet))>=0){ //double pointer
-           if(res==0) {printf("no");continue; }
-           printf("yes\n");
-           break;
+           if(res==0) {continue; }
+           num++;
+           if(num ==10)
+               break;
        }
 
        /* Print its length */
@@ -154,13 +155,14 @@ int main(int argc, char *argv[])
        fprintf(stdout, "DESTINATION IP address  - [%s]\n", inet_ntoa(pIph->ip_dst));
 
        // print TCP
-       fprintf(stdout, "SOURCE port        -[%02x]\n", pTcp->th_sport);
-       fprintf(stdout, "SOURCE port        -[%02x]\n", pTcp->th_dport);
+       fprintf(stdout, "SOURCE port             - [%hu]\n", ntohs(pTcp->th_sport)); //recommandation - befor using %hu, print "%02x" to see real hex value
+       fprintf(stdout, "DESTINATION port        - [%hu]\n", ntohs(pTcp->th_dport)); //without ntohs, it will read memory "little endian"
 
        // print Data
+       fprintf(stdout,"DATA\n");
        for(i = sizeof(*pEth) + sizeof(*pIph) + sizeof(*pTcp) ; i < header->len ; i+=16)
        {
-          fprintf(stdout, "[%08x] ", i);
+          fprintf(stdout, "[%08x] ", i-(sizeof(*pEth) + sizeof(*pIph) + sizeof(*pTcp)));
           for(k = 0 ; k < 16  ; ++k)
           {
               if( k + i < header->len )
@@ -169,13 +171,6 @@ int main(int argc, char *argv[])
                   fprintf(stdout, " ");
               else
                   fprintf(stdout," ");
-
-          /*if(k == 8)
-                fprintf(stdout, "  ");
-            if((k + i) < len)
-                fprintf(stdout, " %02X", * ((u_char*)packet + k + i));
-            else
-                fprintf(stdout, "   ");*/
          }
          printf(" | ");
          for(k = 0 ; k < 16  ; ++k)
@@ -200,4 +195,4 @@ int main(int argc, char *argv[])
        /* And close the session */
        pcap_close(handle);
        return(0);
-    }
+}
