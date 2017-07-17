@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
        bpf_u_int32 net;		/* Our IP */
        struct pcap_pkthdr *header;	/* The header that pcap gives us */
        const u_char *packet;	/* The actual packet */
-       int res,i;
+       int res,i,k;
        struct ethernet_header *pEth;
        struct ip_header *pIph;
        struct tcp_header *pTcp;
@@ -131,7 +131,8 @@ int main(int argc, char *argv[])
        pEth = (struct ethernet_header *)packet;
        pIph = (struct ip_header *)(packet + sizeof(*pEth));
        pTcp = (struct tcp_header *)(packet + sizeof(*pEth) + sizeof(*pIph));
-       printf("packet : %s\n", pEth->ether_dhost);
+
+       //printf("packet : %s\n", pEth->ether_dhost);
 
        // print ehternet
        fprintf(stdout, "DESTINATION MAC Address - [");
@@ -153,9 +154,48 @@ int main(int argc, char *argv[])
        fprintf(stdout, "DESTINATION IP address  - [%s]\n", inet_ntoa(pIph->ip_dst));
 
        // print TCP
-       fprintf(stdout, "SOURCE port        -[%2x]\n", pTcp->th_sport);
-       fprintf(stdout, "SOURCE port        -[%2x]\n", pTcp->th_dport);
+       fprintf(stdout, "SOURCE port        -[%02x]\n", pTcp->th_sport);
+       fprintf(stdout, "SOURCE port        -[%02x]\n", pTcp->th_dport);
 
+       // print Data
+       for(i = sizeof(*pEth) + sizeof(*pIph) + sizeof(*pTcp) ; i < header->len ; i+=16)
+       {
+          fprintf(stdout, "[%08x] ", i);
+          for(k = 0 ; k < 16  ; ++k)
+          {
+              if( k + i < header->len )
+                  fprintf(stdout, "%02X",*((u_char*)packet + k + i ));
+              if( k ==8 )
+                  fprintf(stdout, " ");
+              else
+                  fprintf(stdout," ");
+
+          /*if(k == 8)
+                fprintf(stdout, "  ");
+            if((k + i) < len)
+                fprintf(stdout, " %02X", * ((u_char*)packet + k + i));
+            else
+                fprintf(stdout, "   ");*/
+         }
+         printf(" | ");
+         for(k = 0 ; k < 16  ; ++k)
+         {
+            if(k == 8)
+                fprintf(stdout, " ");
+            if((k + i) < header -> len)
+            {
+                if( ((*((u_char*)packet + k + i)) >= 33) && ((*((u_char*)packet+ k + i)) <= 126) )
+                    fprintf(stdout, "%c", * ( (u_char*)packet + k + i) );
+                else
+                    printf(".");
+            }
+            else
+            {
+                printf(" ");
+            }
+        }
+        printf("\n");
+    }
 
        /* And close the session */
        pcap_close(handle);
