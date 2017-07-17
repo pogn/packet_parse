@@ -19,14 +19,14 @@
 #define ETHER_ADDR_LEN 6
 
 /* Ethernet header */
-struct sniff_ethernet {
+struct ethernet_header{
         u_char  ether_dhost[ETHER_ADDR_LEN];    /* destination host address */
         u_char  ether_shost[ETHER_ADDR_LEN];    /* source host address */
         u_short ether_type;                     /* IP? ARP? RARP? etc */
 };
 
 /* IP header */
-struct sniff_ip {
+struct ip_header{
         u_char  ip_vhl;                 /* version << 4 | header length >> 2 */
         u_char  ip_tos;                 /* type of service */
         u_short ip_len;                 /* total length */
@@ -47,7 +47,7 @@ struct sniff_ip {
 /* TCP header */
 typedef u_int tcp_seq;
 
-struct sniff_tcp {
+struct tcp_header {
         u_short th_sport;               /* source port */
         u_short th_dport;               /* destination port */
         tcp_seq th_seq;                 /* sequence number */
@@ -68,13 +68,6 @@ struct sniff_tcp {
         u_short th_sum;                 /* checksum */
         u_short th_urp;                 /* urgent pointer */
 };
-/*
-int main()
-{
-
-}
-*/
-
 
 int main(int argc, char *argv[])
     {
@@ -89,8 +82,10 @@ int main(int argc, char *argv[])
        bpf_u_int32 net;		/* Our IP */
        struct pcap_pkthdr *header;	/* The header that pcap gives us */
        const u_char *packet;	/* The actual packet */
-       int res;
-
+       int res,i;
+       struct ethernet_header *pEth;
+       struct ip_header *pIph;
+       struct tcp_header *pTcp;
 
        printf("hi");
        /* Define the evice */
@@ -125,14 +120,43 @@ int main(int argc, char *argv[])
        printf("hi");
        while((res = pcap_next_ex(handle, &header, &packet))>=0){ //double pointer
            if(res==0) {printf("no");continue; }
-           printf("yes");
+           printf("yes\n");
            break;
        }
 
-       /* print packet data*/
-       printf("%d",res);
        /* Print its length */
        printf("Jacked a packet with length of [%d]\n", header->len);
+
+       /* print packet data*/
+       pEth = (struct ethernet_header *)packet;
+       pIph = (struct ip_header *)(packet + sizeof(*pEth));
+       pTcp = (struct tcp_header *)(packet + sizeof(*pEth) + sizeof(*pIph));
+       printf("packet : %s\n", pEth->ether_dhost);
+
+       // print ehternet
+       fprintf(stdout, "DESTINATION MAC Address - [");
+       for( i = 0 ; i < 6 ; ++i)
+       {
+         fprintf(stdout, "%02X:", pEth->ether_dhost[i]);
+       }
+       fprintf(stdout, "\b]\t\t\n");
+
+       fprintf(stdout, "SOURCE      MAC Address - [");
+       for( i= 0 ; i < 6 ; ++i)
+       {
+         fprintf(stdout, "%02X:", pEth->ether_shost[i]);
+       }
+       fprintf(stdout, "\b]\n");
+
+       // print IP
+       fprintf(stdout, "SOURCE IP address       - [%s]\n", inet_ntoa(pIph->ip_src));
+       fprintf(stdout, "DESTINATION IP address  - [%s]\n", inet_ntoa(pIph->ip_dst));
+
+       // print TCP
+       fprintf(stdout, "SOURCE port        -[%2x]\n", pTcp->th_sport);
+       fprintf(stdout, "SOURCE port        -[%2x]\n", pTcp->th_dport);
+
+
        /* And close the session */
        pcap_close(handle);
        return(0);
